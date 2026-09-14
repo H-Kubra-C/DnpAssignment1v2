@@ -5,9 +5,9 @@ namespace CLI.UI;
 
 public class CliApp
 {
-    private readonly IUserRepository userRepository;
-    private readonly IPostRepository postRepository;
-    private readonly ICommentRepository commentRepository;
+    private  IUserRepository userRepository;
+    private  IPostRepository postRepository;
+    private  ICommentRepository commentRepository;
 
     public CliApp(IUserRepository userRepository,
         IPostRepository postRepository, ICommentRepository commentRepository)
@@ -24,13 +24,13 @@ public class CliApp
         while (true)
         {
             Console.WriteLine();
-            Console.WriteLine("Welcome to the app!");
-            Console.WriteLine("1. Create user");
-            Console.WriteLine("2. Create post");
-            Console.WriteLine("3. Add comment");
-            Console.WriteLine("4. View posts");
-            Console.WriteLine("5. View specific post");
-            Console.WriteLine("0. Exit");
+            Console.WriteLine("Welcome");
+            Console.WriteLine("1: Create user");
+            Console.WriteLine("2: Create post");
+            Console.WriteLine("3: Add comment");
+            Console.WriteLine("4: View posts");
+            Console.WriteLine("5: View specific post");
+            Console.WriteLine("0: Exit");
 
             string? input = Console.ReadLine();
 
@@ -57,7 +57,7 @@ public class CliApp
                     break;
                 
                 case "0":
-                    Console.WriteLine("Goodbye!");
+                    Console.WriteLine("Exit");
                     return;
 
                 default:
@@ -191,3 +191,5 @@ public class CliApp
         }
     }
 }
+
+
