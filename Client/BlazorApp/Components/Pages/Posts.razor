@@ -1,0 +1,38 @@
+﻿@page "/Posts"
+@using ApiContracts
+@using BlazorApp.HttpServices
+@inject IPostService postService
+
+<h3>Posts</h3>
+
+@if (posts == null)
+{
+    <p>Loading posts...</p>
+}
+else if (posts.Count == 0)
+{
+    <p>No posts found.</p>
+}
+else
+{
+    @foreach (PostDto post in posts)
+    {
+        <div>
+            <h4>
+                <a href="@($"/Posts/{post.Id}")">
+                    @post.Title
+                </a>
+            </h4>
+
+        </div>
+    }
+}
+
+@code {
+    private ICollection<PostDto>? posts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        posts = await postService.GetPostsAsync();
+    }
+}

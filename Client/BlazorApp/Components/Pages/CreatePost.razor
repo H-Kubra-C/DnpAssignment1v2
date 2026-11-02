@@ -1,0 +1,79 @@
+﻿@page "/CreatePost"
+@attribute [Authorize]
+@using System.Security.Claims
+@using ApiContracts
+@using BlazorApp.HttpServices
+
+@inject IPostService postService
+
+<h3>CreatePost</h3>
+
+<div>
+    <label>Title:</label>
+    <input type="text" @bind="title" />
+</div>
+
+<div>
+    <label>Body:</label>
+    <textarea @bind="body"></textarea>
+</div>
+
+<button @onclick="Create">Create Post</button>
+<p>@message</p>
+
+@code {
+    private string title = string.Empty;
+    private string body = string.Empty;
+    private string message = string.Empty;
+    private int userId;
+
+    [CascadingParameter]
+    public Task<AuthenticationState> State { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthenticationState authenticationState = await State;
+        ClaimsPrincipal claimsPrincipal = authenticationState.User;
+
+        if (claimsPrincipal.Identity is null || !claimsPrincipal.Identity.IsAuthenticated)
+        {
+            // the user is not logged in
+            return;
+        }
+
+        string? username = claimsPrincipal.Identity?.Name;
+        IEnumerable<Claim> claims = claimsPrincipal.Claims;
+        string userIdAsString = claims.Single(c => c.Type == "Id").Value;
+
+        userId = int.Parse(userIdAsString);
+    }
+
+    private async Task Create()
+    {
+        if (userId == 0)
+        {
+            message = "You must be logged in to create a post.";
+            return;
+        }
+
+        message = "Creating post...";
+
+        try
+        {
+            CreatePostDto request = new()
+            {
+                Title = title,
+                Body = body,
+                UserId = userId
+            };
+
+            await postService.AddPostAsync(request);
+
+            message = "Post created!";
+        }
+        catch (Exception e)
+        {
+            message = e.Message;
+        }
+    }
+}

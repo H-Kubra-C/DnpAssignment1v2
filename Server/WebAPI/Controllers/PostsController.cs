@@ -12,13 +12,15 @@ public class PostsController : ControllerBase
 {
     private readonly IPostRepository postRepo;
     private readonly ICommentRepository commentRepo;
+    private readonly IUserRepository userRepo;
 
     public PostsController(
         IPostRepository postRepo,
-        ICommentRepository commentRepo)
+        ICommentRepository commentRepo, IUserRepository userRepo)
     {
         this.postRepo = postRepo;
         this.commentRepo = commentRepo;
+        this.userRepo = userRepo;
     }
 
     // POST - Opret et post
@@ -32,7 +34,6 @@ public class PostsController : ControllerBase
             Body = request.Body,
             UserId = request.UserId
         };
-
         Post created = await postRepo.AddAsync(post);
 
         PostDto dto = new PostDto
@@ -42,7 +43,6 @@ public class PostsController : ControllerBase
             Body = created.Body,
             UserId = created.UserId
         };
-
         return Created($"/api/Posts/{dto.Id}", dto);
     }
 
@@ -54,6 +54,7 @@ public class PostsController : ControllerBase
         try
         {
             Post post = await postRepo.GetSingleAsync(id);
+            User user = await userRepo.GetSingleAsync(post.UserId);
 
             var comments = commentRepo.GetManyAsync()
                 .Where(c => c.PostId == id)
@@ -72,9 +73,9 @@ public class PostsController : ControllerBase
                 Title = post.Title,
                 Body = post.Body,
                 UserId = post.UserId,
+                Username = user.Username,
                 Comments = comments
-            };
-
+            }; 
             return Ok(dto);
         }
         catch (InvalidOperationException)

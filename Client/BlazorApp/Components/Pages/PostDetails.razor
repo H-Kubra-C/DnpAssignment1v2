@@ -1,0 +1,118 @@
+﻿
+@page "/Posts/{id:int}"
+@using ApiContracts
+@using BlazorApp.HttpServices
+@using System.Security.Claims
+@inject IPostService postService
+@inject ICommentService commentService
+
+<h3>Post Details</h3>
+
+@if (post == null)
+{
+    <p>Loading post...</p>
+}
+else
+{
+    <h4>@post.Title</h4>
+
+    <p>@post.Body</p>
+
+    <p>Author: @post.Username</p>
+
+    <h5>Comments</h5>
+
+    @if (post.Comments == null || !post.Comments.Any())
+    {
+        <p>No comments yet.</p>
+    }
+    else
+    {
+        @foreach (CommentDto comment in post.Comments)
+        {
+            <p>@comment.Body</p>
+        }
+    }
+
+    <AuthorizeView>
+        <Authorized>
+            <h4>Add Comment</h4>
+
+            <textarea @bind="commentBody"></textarea>
+
+            <button @onclick="AddComment">Add Comment</button>
+        </Authorized>
+
+        <NotAuthorized>
+            <p>Please log in to add a comment.</p>
+        </NotAuthorized>
+    </AuthorizeView>
+
+    <p>@message</p>
+}
+
+@code {
+    [Parameter]
+    public int id { get; set; }
+
+    [CascadingParameter]
+    public Task<AuthenticationState> State { get; set; }
+
+    private PostDto? post;
+    private string commentBody = string.Empty;
+    private string message = string.Empty;
+    private int userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthenticationState authenticationState = await State;
+        ClaimsPrincipal claimsPrincipal = authenticationState.User;
+
+        if (claimsPrincipal.Identity is null || !claimsPrincipal.Identity.IsAuthenticated)
+        {
+            // the user is not logged in
+            return;
+        }
+
+        string? username = claimsPrincipal.Identity?.Name;
+        IEnumerable<Claim> claims = claimsPrincipal.Claims;
+        string userIdAsString = claims.Single(c => c.Type == "Id").Value;
+
+        userId = int.Parse(userIdAsString);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        post = await postService.GetPostAsync(id);
+    }
+
+    private async Task AddComment()
+    {
+        if (userId == 0)
+        {
+            message = "You must be logged in to add a comment.";
+            return;
+        }
+
+        try
+        {
+            CreateCommentDto request = new()
+            {
+                Body = commentBody,
+                PostId = id,
+                UserId = userId
+            };
+
+            await commentService.AddCommentAsync(request);
+
+            post = await postService.GetPostAsync(id);
+
+            commentBody = string.Empty;
+            message = "Comment added!";
+        }
+        catch (Exception e)
+        {
+            message = e.Message;
+        }
+    }
+}
