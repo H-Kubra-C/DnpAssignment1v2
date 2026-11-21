@@ -1,6 +1,6 @@
-﻿
-using ApiContracts;
+﻿using ApiContracts;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using RepositoryContracts;
 using Entities;
 
@@ -28,12 +28,8 @@ public class PostsController : ControllerBase
     public async Task<ActionResult<PostDto>> AddPost(
         [FromBody] CreatePostDto request)
     {
-        Post post = new Post
-        {
-            Title = request.Title,
-            Body = request.Body,
-            UserId = request.UserId
-        };
+        Post post = new Post(request.Title, request.Body, request.UserId);
+
         Post created = await postRepo.AddAsync(post);
 
         PostDto dto = new PostDto
@@ -47,46 +43,42 @@ public class PostsController : ControllerBase
     }
 
     // GET - Hent et post med kommentarer
+    
     [HttpGet("{id}")]
     public async Task<ActionResult<PostDto>> GetPost(
         [FromRoute] int id)
     {
-        try
-        {
-            Post post = await postRepo.GetSingleAsync(id);
-            User user = await userRepo.GetSingleAsync(post.UserId);
+        IQueryable<Post> queryForPost = postRepo.GetManyAsync()
+            .Where(p => p.Id == id);
 
-            var comments = commentRepo.GetManyAsync()
-                .Where(c => c.PostId == id)
-                .Select(c => new CommentDto
-                {
-                    Id = c.Id,
-                    Body = c.Body,
-                    UserId = c.UserId,
-                    PostId = c.PostId
-                })
-                .ToList();
+        queryForPost = queryForPost.Include(p => p.User);
+        queryForPost = queryForPost.Include(p => p.Comments);
 
-            PostDto dto = new PostDto
+        PostDto? dto = await queryForPost
+            .Select(post => new PostDto
             {
                 Id = post.Id,
                 Title = post.Title,
                 Body = post.Body,
                 UserId = post.UserId,
-                Username = user.Username,
-                Comments = comments
-            }; 
-            return Ok(dto);
-        }
-        catch (InvalidOperationException)
-        {
-            return NotFound();
-        }
+                Username = post.User.Username,
+                Comments = post.Comments.Select(c => new CommentDto
+                {
+                    Id = c.Id,
+                    Body = c.Body,
+                    UserId = c.UserId,
+                    PostId = c.PostId
+                }).ToList()
+            })
+            .FirstOrDefaultAsync();
+
+        return dto == null ? NotFound() : Ok(dto);
     }
+
 
     // GET - Hent alle posts eller filtrer
     [HttpGet]
-    public ActionResult<IEnumerable<PostDto>> GetPosts(
+    public async Task<ActionResult<IEnumerable<PostDto>>> GetPosts(
         [FromQuery] string? titleContains,
         [FromQuery] int? userId)
     {
@@ -103,13 +95,13 @@ public class PostsController : ControllerBase
             posts = posts.Where(p => p.UserId == userId.Value);
         }
 
-        var postDtos = posts.Select(p => new PostDto
+        var postDtos = await posts.Select(p => new PostDto
         {
             Id = p.Id,
             Title = p.Title,
             Body = p.Body,
             UserId = p.UserId
-        }).ToList();
+        }).ToListAsync();
 
         return Ok(postDtos);
     }

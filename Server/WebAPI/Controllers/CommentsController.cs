@@ -1,6 +1,6 @@
-﻿
-using ApiContracts;
+﻿using ApiContracts;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using RepositoryContracts;
 using Entities;
 
@@ -22,12 +22,8 @@ public class CommentsController : ControllerBase
     public async Task<ActionResult<CommentDto>> AddComment(
         [FromBody] CreateCommentDto request)
     {
-        Comment comment = new Comment
-        {
-            Body = request.Body,
-            UserId = request.UserId,
-            PostId = request.PostId
-        };
+        Comment comment =
+            new Comment(request.Body, request.UserId, request.PostId);
 
         Comment created = await commentRepo.AddAsync(comment);
 
@@ -69,7 +65,7 @@ public class CommentsController : ControllerBase
 
     // GET - Hent alle kommentarer eller filtrer
     [HttpGet]
-    public ActionResult<IEnumerable<CommentDto>> GetComments(
+    public async Task<ActionResult<IEnumerable<CommentDto>>> GetComments(
         [FromQuery] int? postId,
         [FromQuery] int? userId)
     {
@@ -85,13 +81,13 @@ public class CommentsController : ControllerBase
             comments = comments.Where(c => c.UserId == userId.Value);
         }
 
-        var commentDtos = comments.Select(c => new CommentDto
+        var commentDtos = await comments.Select(c => new CommentDto
         {
             Id = c.Id,
             Body = c.Body,
             UserId = c.UserId,
             PostId = c.PostId
-        }).ToList();
+        }).ToListAsync();
 
         return Ok(commentDtos);
     }

@@ -1,5 +1,5 @@
-﻿
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using RepositoryContracts;
 using ApiContracts;
 using Entities;
@@ -14,7 +14,7 @@ public class UsersController : ControllerBase
 
     public UsersController(IUserRepository userRepo)
     {
-        this.userRepo = userRepo; 
+        this.userRepo = userRepo;
     }
 
     // POST - Opret bruger
@@ -22,11 +22,7 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<UserDto>> AddUser(
         [FromBody] CreateUserDto request)
     {
-        User user = new User
-        {
-            Username = request.Username,
-            Password = request.Password
-        };
+        User user = new User(request.Username, request.Password);
 
         User created = await userRepo.AddAsync(user);
 
@@ -64,7 +60,7 @@ public class UsersController : ControllerBase
 
     // GET - Hent alle brugere eller filtrer
     [HttpGet]
-    public ActionResult<IEnumerable<UserDto>> GetUsers(
+    public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers(
         [FromQuery] string? usernameContains)
     {
         var users = userRepo.GetManyAsync();
@@ -76,11 +72,11 @@ public class UsersController : ControllerBase
                     usernameContains.ToLower()));
         }
 
-        var userDtos = users.Select(u => new UserDto
+        var userDtos = await users.Select(u => new UserDto
         {
             Id = u.Id,
             Username = u.Username
-        }).ToList();
+        }).ToListAsync();
 
         return Ok(userDtos);
     }
